@@ -1,0 +1,992 @@
+import { useState, useEffect, useRef } from "react";
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const LANGUAGES = [
+  { code: "en", label: "English", flag: "🇺🇸" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "de", label: "Deutsch", flag: "🇩🇪" },
+  { code: "ar", label: "العربية", flag: "🇸🇦" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+  { code: "hi", label: "हिन्दी", flag: "🇮🇳" },
+  { code: "pt", label: "Português", flag: "🇧🇷" },
+];
+
+const AGENTS = [
+  { id: "aria", name: "Aria", role: "Shopping Guide", emoji: "👩‍💼", color: "#FF6B9D", specialty: "fashion, gifts, lifestyle" },
+  { id: "max",  name: "Max",  role: "Tech Expert",    emoji: "🧑‍💻", color: "#4ECDC4", specialty: "electronics, gadgets, gaming" },
+  { id: "luna", name: "Luna", role: "Deal Hunter",    emoji: "👩‍🎤", color: "#FFE66D", specialty: "discounts, bundles, flash sales" },
+  { id: "raj",  name: "Raj",  role: "Seller Advisor", emoji: "🧑‍🏫", color: "#A29BFE", specialty: "selling, listings, shipping" },
+];
+
+const CATEGORIES = [
+  { icon: "🎁", name: "Gifts",       color: "#FF6B9D" },
+  { icon: "👗", name: "Fashion",     color: "#FD79A8" },
+  { icon: "📱", name: "Electronics", color: "#4ECDC4" },
+  { icon: "🏠", name: "Home",        color: "#6C5CE7" },
+  { icon: "🍎", name: "Grocery",     color: "#00B894" },
+  { icon: "💄", name: "Beauty",      color: "#E84393" },
+  { icon: "📚", name: "Books",       color: "#FDCB6E" },
+  { icon: "⚽", name: "Sports",      color: "#74B9FF" },
+  { icon: "🧸", name: "Kids",        color: "#FF7675" },
+  { icon: "🌱", name: "Garden",      color: "#55EFC4" },
+];
+
+const PRODUCTS = [
+  { id: 1, name: "Luxury Gift Hamper", price: 49.99,  originalPrice: 79.99,  rating: 4.8, reviews: 1240, category: "Gifts",       emoji: "🎁",  seller: "GiftWorld Co.",  country: "🇺🇸", badge: "Bestseller",   desc: "Premium curated gift box with chocolates, candles, and self-care items. Perfect for any occasion." },
+  { id: 2, name: "Smart Watch Pro",    price: 129.00, originalPrice: 199.00, rating: 4.6, reviews: 890,  category: "Electronics", emoji: "⌚",  seller: "TechNest Ltd.",  country: "🇨🇳", badge: "Flash Deal",   desc: "Advanced smartwatch with heart rate, GPS, sleep tracking, and 7-day battery life." },
+  { id: 3, name: "Silk Evening Dress", price: 64.99,  originalPrice: 89.99,  rating: 4.7, reviews: 567,  category: "Fashion",     emoji: "👗",  seller: "StyleHub Paris", country: "🇫🇷", badge: "Trending",     desc: "Elegant silk blend evening dress, available in 12 colors and all international sizes." },
+  { id: 4, name: "Aromatherapy Set",   price: 34.99,  originalPrice: 54.99,  rating: 4.9, reviews: 2103, category: "Beauty",      emoji: "🕯️",  seller: "WellnessWorld",  country: "🇬🇧", badge: "Top Rated",    desc: "Set of 6 essential oil blends with diffuser. Lavender, eucalyptus, and more." },
+  { id: 5, name: "Kids LEGO City Set", price: 42.00,  originalPrice: 60.00,  rating: 4.8, reviews: 734,  category: "Kids",        emoji: "🧱",  seller: "PlayZone Kids",  country: "🇩🇪", badge: "Sale",         desc: "600-piece LEGO city building set for ages 7+. Includes 4 mini-figures." },
+  { id: 6, name: "Wireless Earbuds",   price: 59.99,  originalPrice: 89.99,  rating: 4.5, reviews: 1876, category: "Electronics", emoji: "🎧",  seller: "SoundWave Inc.", country: "🇰🇷", badge: "Flash Deal",   desc: "True wireless earbuds with active noise cancellation and 30-hour total battery." },
+  { id: 7, name: "Coffee Gift Set",    price: 38.50,  originalPrice: 55.00,  rating: 4.7, reviews: 429,  category: "Gifts",       emoji: "☕",  seller: "BeanBox Direct", country: "🇮🇹", badge: "New",          desc: "World coffee tour — 8 single-origin roasts from 8 countries, freshly ground." },
+  { id: 8, name: "Yoga Mat Premium",   price: 45.00,  originalPrice: 65.00,  rating: 4.6, reviews: 983,  category: "Sports",      emoji: "🧘",  seller: "ZenFit Global",  country: "🇮🇳", badge: "Eco-Friendly", desc: "Non-slip, eco TPE yoga mat 6mm thick. Alignment lines, carrying strap included." },
+];
+
+const SELLERS = [
+  { name: "GiftWorld Co.",  country: "🇺🇸", rating: 4.9, sales: "12K+", verified: true },
+  { name: "TechNest Ltd.",  country: "🇨🇳", rating: 4.7, sales: "45K+", verified: true },
+  { name: "StyleHub Paris", country: "🇫🇷", rating: 4.8, sales: "8K+",  verified: true },
+  { name: "WellnessWorld",  country: "🇬🇧", rating: 4.9, sales: "21K+", verified: true },
+];
+
+const PAYMENT_METHODS = [
+  { id: "card",   label: "Credit / Debit Card", icon: "💳", desc: "Visa, Mastercard, Amex, UnionPay" },
+  { id: "paypal", label: "PayPal",              icon: "🅿️", desc: "Pay with your PayPal balance or linked card" },
+  { id: "apple",  label: "Apple Pay",           icon: "🍎", desc: "One-tap payment with Face ID / Touch ID" },
+  { id: "google", label: "Google Pay",          icon: "🔵", desc: "Fast checkout with your Google account" },
+  { id: "stripe", label: "Stripe",              icon: "⚡", desc: "Secure global payments powered by Stripe" },
+  { id: "crypto", label: "Crypto",              icon: "₿",  desc: "Bitcoin, Ethereum, USDT & more" },
+  { id: "cod",    label: "Cash on Delivery",    icon: "💵", desc: "Pay when your order arrives at your door" },
+  { id: "bank",   label: "Bank Transfer",       icon: "🏦", desc: "Direct transfer from your bank account" },
+];
+
+// ─── LOGO ─────────────────────────────────────────────────────────────────────
+function GiftCartLogo({ size = 40, showText = true }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        width: size, height: size,
+        background: "linear-gradient(135deg, #FF6B9D 0%, #FF8E53 50%, #FFD93D 100%)",
+        borderRadius: size * 0.28,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: size * 0.52,
+        boxShadow: "0 4px 15px rgba(255,107,157,0.5)",
+        position: "relative", flexShrink: 0,
+      }}>
+        🎁
+        <div style={{
+          position: "absolute", top: -4, right: -4,
+          width: size * 0.32, height: size * 0.32,
+          background: "#FFD93D", borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: size * 0.18, border: "2px solid #fff",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+        }}>🛒</div>
+      </div>
+      {showText && (
+        <div>
+          <div style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontWeight: 700, fontSize: size * 0.55,
+            background: "linear-gradient(135deg, #FF6B9D, #FF8E53)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            letterSpacing: "-0.5px", lineHeight: 1,
+          }}>GIFT-CART</div>
+          <div style={{ fontSize: size * 0.22, color: "#888", fontFamily: "Helvetica Neue, sans-serif", letterSpacing: "2px", textTransform: "uppercase" }}>Shop the World</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stars({ rating }) {
+  return (
+    <span style={{ color: "#FFD93D", fontSize: 13 }}>
+      {"★".repeat(Math.floor(rating))}{"☆".repeat(5 - Math.floor(rating))}
+      <span style={{ color: "#888", fontSize: 11, marginLeft: 4 }}>{rating}</span>
+    </span>
+  );
+}
+
+// ─── PAYMENT CHECKOUT MODAL ────────────────────────────────────────────────────
+function CheckoutModal({ cartItems, cartTotal, onClose, onSuccess }) {
+  const [step, setStep] = useState(1); // 1=address, 2=payment method, 3=card details, 4=confirm, 5=success
+  const [payMethod, setPayMethod] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [addr, setAddr] = useState({ name: "", email: "", phone: "", address: "", city: "", country: "", zip: "" });
+  const [card, setCard] = useState({ number: "", expiry: "", cvv: "", holder: "" });
+  const [errors, setErrors] = useState({});
+
+  const tax = cartTotal * 0.08;
+  const shipping = cartTotal > 50 ? 0 : 4.99;
+  const grandTotal = cartTotal + tax + shipping;
+
+  const formatCard = (val) => val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+  const formatExpiry = (val) => {
+    const d = val.replace(/\D/g, "").slice(0, 4);
+    return d.length >= 3 ? d.slice(0, 2) + "/" + d.slice(2) : d;
+  };
+
+  const validateAddr = () => {
+    const e = {};
+    if (!addr.name.trim()) e.name = "Required";
+    if (!addr.email.includes("@")) e.email = "Valid email required";
+    if (!addr.address.trim()) e.address = "Required";
+    if (!addr.city.trim()) e.city = "Required";
+    if (!addr.country.trim()) e.country = "Required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handlePay = () => {
+    if (payMethod === "card" && (!card.number || !card.expiry || !card.cvv || !card.holder)) {
+      setErrors({ card: "Please fill in all card details" });
+      return;
+    }
+    setProcessing(true);
+    setTimeout(() => { setProcessing(false); setStep(5); }, 2200);
+  };
+
+  const inp = (placeholder, field, obj, setObj, fmt) => (
+    <input
+      placeholder={placeholder}
+      value={obj[field]}
+      onChange={e => setObj(o => ({ ...o, [field]: fmt ? fmt(e.target.value) : e.target.value }))}
+      style={{
+        border: `2px solid ${errors[field] ? "#FF6B9D" : "#f0f0f0"}`,
+        borderRadius: 12, padding: "11px 14px", fontSize: 14, outline: "none",
+        width: "100%", background: "#FAFAFA", transition: "border-color 0.2s",
+      }}
+      onFocus={e => e.target.style.borderColor = "#FF6B9D"}
+      onBlur={e => e.target.style.borderColor = errors[field] ? "#FF6B9D" : "#f0f0f0"}
+    />
+  );
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
+      zIndex: 2000, display: "flex", alignItems: "flex-end", justifyContent: "center",
+    }} onClick={e => e.target === e.currentTarget && step !== 5 && onClose()}>
+      <div style={{
+        width: "100%", maxWidth: 520,
+        background: "#fff", borderRadius: "28px 28px 0 0",
+        maxHeight: "92vh", display: "flex", flexDirection: "column",
+        overflow: "hidden", boxShadow: "0 -12px 60px rgba(0,0,0,0.25)",
+        animation: "slideUp 0.35s cubic-bezier(.22,.61,.36,1)",
+      }}>
+
+        {/* ── HEADER ── */}
+        <div style={{
+          padding: "18px 22px 14px",
+          background: "linear-gradient(135deg,#FF6B9D,#FF8E53)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, fontFamily: "'Playfair Display',serif" }}>
+              {step === 1 ? "📦 Delivery Address"
+               : step === 2 ? "💳 Payment Method"
+               : step === 3 ? "🔐 Card Details"
+               : step === 4 ? "✅ Confirm Order"
+               : "🎉 Order Confirmed!"}
+            </div>
+            {step < 5 && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 2 }}>Step {step} of 4</div>}
+          </div>
+          {step < 5 && (
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.25)", border: "none", borderRadius: "50%", width: 34, height: 34, cursor: "pointer", color: "#fff", fontSize: 16 }}>✕</button>
+          )}
+        </div>
+
+        {/* ── STEP INDICATOR ── */}
+        {step < 5 && (
+          <div style={{ display: "flex", padding: "12px 22px 0", gap: 6 }}>
+            {[1,2,3,4].map(s => (
+              <div key={s} style={{
+                flex: 1, height: 4, borderRadius: 4,
+                background: s <= step ? "linear-gradient(90deg,#FF6B9D,#FF8E53)" : "#f0f0f0",
+                transition: "all 0.4s",
+              }} />
+            ))}
+          </div>
+        )}
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px 24px" }}>
+
+          {/* ── STEP 1: ADDRESS ── */}
+          {step === 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>{inp("Full Name *", "name", addr, setAddr)}{errors.name && <div style={{ color: "#FF6B9D", fontSize: 11, marginTop: 2 }}>{errors.name}</div>}</div>
+                <div>{inp("Phone Number", "phone", addr, setAddr)}</div>
+              </div>
+              <div>{inp("Email Address *", "email", addr, setAddr)}{errors.email && <div style={{ color: "#FF6B9D", fontSize: 11, marginTop: 2 }}>{errors.email}</div>}</div>
+              <div>{inp("Street Address *", "address", addr, setAddr)}{errors.address && <div style={{ color: "#FF6B9D", fontSize: 11, marginTop: 2 }}>{errors.address}</div>}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>{inp("City *", "city", addr, setAddr)}{errors.city && <div style={{ color: "#FF6B9D", fontSize: 11, marginTop: 2 }}>{errors.city}</div>}</div>
+                <div>{inp("ZIP / Postal Code", "zip", addr, setAddr)}</div>
+              </div>
+              <div>{inp("Country *", "country", addr, setAddr)}{errors.country && <div style={{ color: "#FF6B9D", fontSize: 11, marginTop: 2 }}>{errors.country}</div>}</div>
+
+              {/* Order summary mini */}
+              <div style={{ background: "#FFF5F8", borderRadius: 16, padding: 14, marginTop: 6 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "#1a1a2e" }}>Order Summary</div>
+                {cartItems.map(item => (
+                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6, color: "#555" }}>
+                    <span>{item.emoji} {item.name} ×{item.qty}</span>
+                    <span style={{ fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div style={{ borderTop: "1px dashed #FFD0E0", paddingTop: 8, marginTop: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#888", marginBottom: 4 }}>
+                    <span>Subtotal</span><span>${cartTotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#888", marginBottom: 4 }}>
+                    <span>Shipping</span><span style={{ color: shipping === 0 ? "#00B894" : "#555" }}>{shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#888", marginBottom: 6 }}>
+                    <span>Tax (8%)</span><span>${tax.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 15, color: "#FF6B9D" }}>
+                    <span>Total</span><span>${grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => { if (validateAddr()) setStep(2); }} style={{
+                background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", color: "#fff",
+                border: "none", borderRadius: 16, padding: "14px", fontWeight: 700,
+                fontSize: 15, cursor: "pointer", marginTop: 4,
+              }}>Continue to Payment →</button>
+            </div>
+          )}
+
+          {/* ── STEP 2: PAYMENT METHOD ── */}
+          {step === 2 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <p style={{ color: "#888", fontSize: 13, margin: "0 0 6px" }}>Choose how you'd like to pay. All payments are secured with 256-bit SSL encryption. 🔒</p>
+              {PAYMENT_METHODS.map(pm => (
+                <button key={pm.id} onClick={() => setPayMethod(pm.id)} style={{
+                  display: "flex", alignItems: "center", gap: 14,
+                  border: `2px solid ${payMethod === pm.id ? "#FF6B9D" : "#f0f0f0"}`,
+                  borderRadius: 16, padding: "14px 16px",
+                  background: payMethod === pm.id ? "#FFF5F8" : "#fff",
+                  cursor: "pointer", textAlign: "left", transition: "all 0.2s",
+                  boxShadow: payMethod === pm.id ? "0 4px 20px rgba(255,107,157,0.15)" : "none",
+                }}>
+                  <div style={{ fontSize: 28, width: 40, textAlign: "center" }}>{pm.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1a1a2e" }}>{pm.label}</div>
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{pm.desc}</div>
+                  </div>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    border: `2px solid ${payMethod === pm.id ? "#FF6B9D" : "#ddd"}`,
+                    background: payMethod === pm.id ? "#FF6B9D" : "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                  }}>{payMethod === pm.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}</div>
+                </button>
+              ))}
+
+              {/* Accepted cards logos row */}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "#aaa" }}>Accepted:</span>
+                {["VISA","MC","AMEX","PayPal","Stripe","₿"].map(logo => (
+                  <div key={logo} style={{ background: "#f5f5f5", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#555" }}>{logo}</div>
+                ))}
+              </div>
+
+              <button onClick={() => { if (!payMethod) return; payMethod === "card" ? setStep(3) : setStep(4); }} style={{
+                background: payMethod ? "linear-gradient(135deg,#FF6B9D,#FF8E53)" : "#f0f0f0",
+                color: payMethod ? "#fff" : "#bbb",
+                border: "none", borderRadius: 16, padding: "14px", fontWeight: 700, fontSize: 15,
+                cursor: payMethod ? "pointer" : "not-allowed", marginTop: 4,
+                transition: "all 0.3s",
+              }}>Continue →</button>
+
+              <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#aaa", fontSize: 13, cursor: "pointer" }}>← Back to Address</button>
+            </div>
+          )}
+
+          {/* ── STEP 3: CARD DETAILS ── */}
+          {step === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Card preview */}
+              <div style={{
+                background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",
+                borderRadius: 20, padding: "24px 22px", color: "#fff",
+                position: "relative", overflow: "hidden", minHeight: 160,
+              }}>
+                <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
+                <div style={{ position: "absolute", bottom: -30, left: 60, width: 150, height: 150, borderRadius: "50%", background: "rgba(255,107,157,0.1)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, position: "relative" }}>
+                  <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: 16, color: "#FF6B9D" }}>GIFT-CART</div>
+                  <div style={{ fontSize: 22 }}>💳</div>
+                </div>
+                <div style={{ fontFamily: "monospace", fontSize: 18, letterSpacing: 3, marginBottom: 16, position: "relative" }}>
+                  {card.number || "•••• •••• •••• ••••"}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, position: "relative" }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#aaa", marginBottom: 2 }}>CARD HOLDER</div>
+                    <div style={{ fontWeight: 600 }}>{card.holder || "YOUR NAME"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#aaa", marginBottom: 2 }}>EXPIRES</div>
+                    <div style={{ fontWeight: 600 }}>{card.expiry || "MM/YY"}</div>
+                  </div>
+                </div>
+              </div>
+
+              {errors.card && <div style={{ background: "#FFF0F5", border: "1px solid #FFD0E0", borderRadius: 10, padding: "10px 14px", color: "#FF6B9D", fontSize: 13 }}>⚠️ {errors.card}</div>}
+
+              {inp("Card Holder Name", "holder", card, setCard)}
+              {inp("Card Number", "number", card, setCard, formatCard)}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {inp("MM/YY", "expiry", card, setCard, formatExpiry)}
+                {inp("CVV", "cvv", card, setCard)}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F0FFF8", borderRadius: 12, padding: "10px 14px" }}>
+                <span style={{ fontSize: 18 }}>🔒</span>
+                <span style={{ fontSize: 12, color: "#00B894", fontWeight: 600 }}>Your card details are encrypted with 256-bit SSL. We never store your CVV.</span>
+              </div>
+
+              <button onClick={() => setStep(4)} style={{
+                background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", color: "#fff",
+                border: "none", borderRadius: 16, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer",
+              }}>Review Order →</button>
+              <button onClick={() => setStep(2)} style={{ background: "none", border: "none", color: "#aaa", fontSize: 13, cursor: "pointer" }}>← Back</button>
+            </div>
+          )}
+
+          {/* ── STEP 4: CONFIRM ── */}
+          {step === 4 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Delivery */}
+              <div style={{ background: "#F8F9FF", borderRadius: 16, padding: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: "#1a1a2e" }}>📦 Delivering To</div>
+                <div style={{ fontSize: 13, color: "#555", lineHeight: 1.7 }}>
+                  <b>{addr.name}</b><br />
+                  {addr.address}, {addr.city}, {addr.country} {addr.zip}<br />
+                  {addr.email} · {addr.phone}
+                </div>
+              </div>
+
+              {/* Payment */}
+              <div style={{ background: "#F8F9FF", borderRadius: 16, padding: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: "#1a1a2e" }}>💳 Payment</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>{PAYMENT_METHODS.find(p => p.id === payMethod)?.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{PAYMENT_METHODS.find(p => p.id === payMethod)?.label}</div>
+                    {payMethod === "card" && card.number && <div style={{ fontSize: 12, color: "#aaa" }}>ending in {card.number.replace(/\s/g, "").slice(-4)}</div>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div style={{ background: "#FFF5F8", borderRadius: 16, padding: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "#1a1a2e" }}>🛍️ Items ({cartItems.length})</div>
+                {cartItems.map(item => (
+                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                    <span style={{ color: "#555" }}>{item.emoji} {item.name} ×{item.qty}</span>
+                    <span style={{ fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div style={{ borderTop: "1px dashed #FFD0E0", marginTop: 10, paddingTop: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#aaa", marginBottom: 4 }}><span>Subtotal</span><span>${cartTotal.toFixed(2)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#aaa", marginBottom: 4 }}><span>Shipping</span><span style={{ color: shipping === 0 ? "#00B894" : "#555" }}>{shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#aaa", marginBottom: 8 }}><span>Tax (8%)</span><span>${tax.toFixed(2)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 17, color: "#FF6B9D" }}><span>Grand Total</span><span>${grandTotal.toFixed(2)}</span></div>
+                </div>
+              </div>
+
+              <button onClick={handlePay} disabled={processing} style={{
+                background: processing ? "#f0f0f0" : "linear-gradient(135deg,#00B894,#00CEC9)",
+                color: processing ? "#aaa" : "#fff",
+                border: "none", borderRadius: 16, padding: "16px", fontWeight: 800,
+                fontSize: 16, cursor: processing ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                transition: "all 0.3s",
+              }}>
+                {processing ? (
+                  <>
+                    <div style={{ width: 18, height: 18, border: "3px solid #ddd", borderTopColor: "#FF6B9D", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                    Processing Payment...
+                  </>
+                ) : `🔒 Pay $${grandTotal.toFixed(2)}`}
+              </button>
+              <button onClick={() => setStep(2)} style={{ background: "none", border: "none", color: "#aaa", fontSize: 13, cursor: "pointer" }}>← Change Payment</button>
+            </div>
+          )}
+
+          {/* ── STEP 5: SUCCESS ── */}
+          {step === 5 && (
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{ fontSize: 72, marginBottom: 12, animation: "pop 0.5s ease" }}>🎉</div>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", color: "#1a1a2e", margin: "0 0 8px" }}>Payment Successful!</h2>
+              <p style={{ color: "#888", fontSize: 14, margin: "0 0 20px", lineHeight: 1.6 }}>
+                Your order has been confirmed and payment of <b style={{ color: "#FF6B9D" }}>${grandTotal.toFixed(2)}</b> received.<br />
+                A confirmation has been sent to <b>{addr.email}</b>.
+              </p>
+
+              <div style={{ background: "linear-gradient(135deg,#F0FFF8,#E8F8EF)", borderRadius: 20, padding: 20, marginBottom: 20 }}>
+                <div style={{ color: "#00B894", fontWeight: 800, fontSize: 16, marginBottom: 12 }}>✅ Order #GC-{Math.random().toString(36).slice(2,8).toUpperCase()}</div>
+                {cartItems.map(item => (
+                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, background: "#fff", borderRadius: 12, padding: "10px 14px" }}>
+                    <span style={{ fontSize: 24 }}>{item.emoji}</span>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name}</div>
+                      <div style={{ fontSize: 12, color: "#aaa" }}>Qty: {item.qty} · ${(item.price * item.qty).toFixed(2)}</div>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ marginTop: 12, fontSize: 13, color: "#555" }}>
+                  📦 Estimated delivery: <b style={{ color: "#00B894" }}>5–7 business days</b><br />
+                  🚚 Shipping to: <b>{addr.city}, {addr.country}</b>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { onSuccess(); onClose(); }} style={{
+                  flex: 1, background: "linear-gradient(135deg,#FF6B9D,#FF8E53)",
+                  color: "#fff", border: "none", borderRadius: 16, padding: "13px",
+                  fontWeight: 700, fontSize: 14, cursor: "pointer",
+                }}>Continue Shopping 🛍️</button>
+                <button onClick={() => {}} style={{
+                  background: "#F0F4FF", color: "#6C5CE7", border: "none",
+                  borderRadius: 16, padding: "13px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer",
+                }}>Track Order</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
+function ProductCard({ product, onChat, onAddCart, onBuyNow }) {
+  const discount = Math.round((1 - product.price / product.originalPrice) * 100);
+  const [wished, setWished] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = () => {
+    setAdded(true);
+    onAddCart(product);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 20, overflow: "hidden",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.08)", transition: "transform 0.2s, box-shadow 0.2s",
+      cursor: "pointer", position: "relative",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(255,107,157,0.2)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.08)"; }}
+    >
+      {product.badge && (
+        <div style={{
+          position: "absolute", top: 12, left: 12, zIndex: 2,
+          background: product.badge === "Flash Deal" ? "linear-gradient(135deg,#FF6B9D,#FF8E53)"
+            : product.badge === "Bestseller" ? "linear-gradient(135deg,#6C5CE7,#A29BFE)"
+            : product.badge === "Top Rated" ? "linear-gradient(135deg,#00B894,#55EFC4)"
+            : "linear-gradient(135deg,#FFD93D,#FDCB6E)",
+          color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+        }}>{product.badge}</div>
+      )}
+      <button onClick={() => setWished(!wished)} style={{ position: "absolute", top: 10, right: 12, zIndex: 2, background: "none", border: "none", cursor: "pointer", fontSize: 20, filter: wished ? "none" : "grayscale(1)" }}>❤️</button>
+
+      <div style={{ height: 150, background: "linear-gradient(135deg,#FFF5F8,#FFF9F0)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 72 }}>{product.emoji}</div>
+
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 3 }}>{product.country} {product.seller}</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "#1a1a2e", marginBottom: 5, lineHeight: 1.3 }}>{product.name}</div>
+        <Stars rating={product.rating} />
+        <div style={{ fontSize: 11, color: "#aaa", marginTop: 1 }}>({product.reviews.toLocaleString()} reviews)</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#FF6B9D" }}>${product.price}</span>
+          <span style={{ fontSize: 12, color: "#ccc", textDecoration: "line-through" }}>${product.originalPrice}</span>
+          <span style={{ background: "#FFF0F5", color: "#FF6B9D", fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "1px 6px" }}>{discount}% OFF</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+          <button onClick={handleAdd} style={{
+            flex: 1,
+            background: added ? "linear-gradient(135deg,#00B894,#55EFC4)" : "linear-gradient(135deg,#FF6B9D,#FF8E53)",
+            color: "#fff", border: "none", borderRadius: 10, padding: "8px 0",
+            fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all 0.3s",
+          }}>{added ? "✓ Added!" : "Add to Cart"}</button>
+          <button onClick={() => onBuyNow(product)} style={{
+            flex: 1, background: "#1a1a2e", color: "#fff",
+            border: "none", borderRadius: 10, padding: "8px 0",
+            fontWeight: 700, fontSize: 12, cursor: "pointer",
+          }}>Buy Now</button>
+        </div>
+        <button onClick={() => onChat(product)} style={{
+          width: "100%", marginTop: 6,
+          background: "#F0F4FF", color: "#6C5CE7", border: "none", borderRadius: 10,
+          padding: "7px", fontWeight: 600, fontSize: 12, cursor: "pointer",
+        }}>💬 Ask AI Agent</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI AGENT CHAT ────────────────────────────────────────────────────────────
+function AgentChat({ agent, product, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    const greeting = product
+      ? `Hi! I'm ${agent.name}, your ${agent.role}. I see you're interested in **${product.name}** — it's one of our most popular picks! 🎉 What would you like to know?`
+      : `Hi! I'm ${agent.name}, your ${agent.role} at GIFT-CART. I specialize in ${agent.specialty}. How can I help you today?`;
+    setMessages([{ role: "assistant", text: greeting }]);
+  }, []);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMessages(m => [...m, { role: "user", text: userMsg }]);
+    setLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are ${agent.name}, an AI sales agent for GIFT-CART — a global e-commerce marketplace. Role: ${agent.role}. Specialty: ${agent.specialty}. ${product ? `Customer is viewing: "${product.name}" at $${product.price}. Description: ${product.desc}.` : ""} Be warm, helpful, concise (2-4 sentences). Use emojis naturally.`,
+          messages: [
+            ...messages.map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text })),
+            { role: "user", content: userMsg },
+          ],
+        }),
+      });
+      const data = await res.json();
+      const reply = data.content?.find(b => b.type === "text")?.text || "Sorry, try again!";
+      setMessages(m => [...m, { role: "assistant", text: reply }]);
+    } catch {
+      setMessages(m => [...m, { role: "assistant", text: "Oops! Something went wrong 😊" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "24px 24px 0 0", height: "78vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 -8px 40px rgba(0,0,0,0.2)" }}>
+        <div style={{ padding: "16px 20px", background: `linear-gradient(135deg,${agent.color}22,${agent.color}11)`, borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg,${agent.color},${agent.color}99)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{agent.emoji}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{agent.name}</div>
+            <div style={{ fontSize: 11, color: "#888" }}>{agent.role} · Online</div>
+          </div>
+          <button onClick={onClose} style={{ background: "#f0f0f0", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+              {m.role === "assistant" && <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${agent.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, marginRight: 8, flexShrink: 0 }}>{agent.emoji}</div>}
+              <div style={{ maxWidth: "78%", background: m.role === "user" ? `linear-gradient(135deg,#FF6B9D,#FF8E53)` : "#F8F8FF", color: m.role === "user" ? "#fff" : "#1a1a2e", borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", padding: "9px 13px", fontSize: 13, lineHeight: 1.5 }}>{m.text}</div>
+            </div>
+          ))}
+          {loading && <div style={{ display: "flex", gap: 5, padding: "8px 14px" }}>{[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: agent.color, animation: `bounce 1s ${i*0.2}s infinite` }} />)}</div>}
+          <div ref={bottomRef} />
+        </div>
+        {messages.length === 1 && (
+          <div style={{ padding: "0 14px 8px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {["Tell me more", "Is it in stock?", "Best price?", "Similar items?"].map(s => (
+              <button key={s} onClick={() => setInput(s)} style={{ background: "#F0F4FF", border: "1px solid #E0E7FF", color: "#6C5CE7", borderRadius: 20, padding: "4px 11px", fontSize: 11, cursor: "pointer", fontWeight: 500 }}>{s}</button>
+            ))}
+          </div>
+        )}
+        <div style={{ padding: "10px 14px", borderTop: "1px solid #f0f0f0", display: "flex", gap: 8 }}>
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={`Ask ${agent.name}...`}
+            style={{ flex: 1, border: "2px solid #f0f0f0", borderRadius: 20, padding: "9px 14px", fontSize: 13, outline: "none" }}
+            onFocus={e => e.target.style.borderColor = agent.color} onBlur={e => e.target.style.borderColor = "#f0f0f0"} />
+          <button onClick={send} style={{ background: `linear-gradient(135deg,${agent.color},#FF8E53)`, border: "none", borderRadius: 20, padding: "9px 16px", color: "#fff", fontWeight: 700, cursor: "pointer" }}>→</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SELLER MODAL ─────────────────────────────────────────────────────────────
+function SellerModal({ onClose }) {
+  const [step, setStep] = useState(1);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", borderRadius: 24, padding: 32, maxWidth: 440, width: "90%", position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "#f0f0f0", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>✕</button>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 48 }}>🌍</div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", color: "#1a1a2e", margin: "8px 0 4px" }}>Sell on GIFT-CART</h2>
+          <p style={{ color: "#888", fontSize: 14 }}>Reach millions of buyers in 180+ countries</p>
+        </div>
+        {step === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {["🎁 Gifts & Crafts","👗 Fashion & Apparel","📱 Electronics","🏠 Home & Living","🌱 Other Products"].map(cat => (
+              <button key={cat} onClick={() => setStep(2)} style={{ border: "2px solid #f0f0f0", borderRadius: 14, padding: "12px 16px", background: "#fff", cursor: "pointer", textAlign: "left", fontSize: 15, fontWeight: 500, transition: "all 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF6B9D"; e.currentTarget.style.background = "#FFF5F8"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#f0f0f0"; e.currentTarget.style.background = "#fff"; }}
+              >{cat}</button>
+            ))}
+          </div>
+        )}
+        {step === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input placeholder="Business / Store Name" style={{ border: "2px solid #f0f0f0", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none" }} />
+            <input placeholder="Email Address" style={{ border: "2px solid #f0f0f0", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none" }} />
+            <input placeholder="Country" style={{ border: "2px solid #f0f0f0", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none" }} />
+            <select style={{ border: "2px solid #f0f0f0", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none" }}>
+              <option>Ship Worldwide</option><option>Ship Regionally</option><option>My Country Only</option>
+            </select>
+            <button onClick={() => setStep(3)} style={{ background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Register My Store →</button>
+          </div>
+        )}
+        {step === 3 && (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", color: "#1a1a2e" }}>You're Almost There!</h3>
+            <p style={{ color: "#666", fontSize: 14, lineHeight: 1.6 }}>Your seller application is under review. Our team will contact you within 24 hours.</p>
+            <button onClick={onClose} style={{ marginTop: 16, background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", color: "#fff", border: "none", borderRadius: 14, padding: "12px 28px", fontWeight: 700, cursor: "pointer" }}>Got it! 🚀</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function GiftCartApp() {
+  const [activeTab, setActiveTab] = useState("home");
+  const [cartItems, setCartItems] = useState([]);
+  const [chatAgent, setChatAgent] = useState(null);
+  const [chatProduct, setChatProduct] = useState(null);
+  const [showSeller, setShowSeller] = useState(false);
+  const [lang, setLang] = useState("en");
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [showCart, setShowCart] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [checkoutSingleItem, setCheckoutSingleItem] = useState(null);
+
+  const notify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 2500); };
+
+  const addToCart = (product) => {
+    setCartItems(c => {
+      const exists = c.find(i => i.id === product.id);
+      if (exists) return c.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...c, { ...product, qty: 1 }];
+    });
+    notify(`${product.emoji} ${product.name} added to cart!`);
+  };
+
+  const openBuyNow = (product) => {
+    setCheckoutSingleItem([{ ...product, qty: 1 }]);
+    setShowCheckout(true);
+    setShowCart(false);
+  };
+
+  const openCheckout = () => {
+    setCheckoutSingleItem(null);
+    setShowCheckout(true);
+    setShowCart(false);
+  };
+
+  const filteredProducts = PRODUCTS.filter(p => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !selectedCategory || p.category === selectedCategory;
+    return matchSearch && matchCat;
+  });
+
+  const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
+  const checkoutItems = checkoutSingleItem || cartItems;
+  const checkoutTotal = checkoutItems.reduce((s, i) => s + i.price * i.qty, 0);
+
+  return (
+    <div style={{ fontFamily: "Helvetica Neue, Arial, sans-serif", background: "#FAFAFA", minHeight: "100vh", maxWidth: 900, margin: "0 auto", position: "relative" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap');
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes slideIn { from{transform:translateY(-20px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #FF6B9D; border-radius: 10px; }
+      `}</style>
+
+      {notification && (
+        <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#1a1a2e,#16213e)", color: "#fff", padding: "12px 24px", borderRadius: 50, zIndex: 9999, fontSize: 14, fontWeight: 600, animation: "slideIn 0.3s ease", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>{notification}</div>
+      )}
+
+      {/* HEADER */}
+      <div style={{ background: "#fff", padding: "14px 20px", borderBottom: "1px solid #F0F0F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <GiftCartLogo size={34} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <select value={lang} onChange={e => setLang(e.target.value)} style={{ border: "1px solid #f0f0f0", borderRadius: 20, padding: "5px 10px", fontSize: 12, background: "#fff", cursor: "pointer", outline: "none" }}>
+              {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.flag} {l.label}</option>)}
+            </select>
+            <button onClick={() => setShowCart(!showCart)} style={{ background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", border: "none", borderRadius: 20, padding: "7px 14px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              🛒
+              {cartCount > 0 && <span style={{ background: "#FFD93D", color: "#1a1a2e", borderRadius: "50%", width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{cartCount}</span>}
+            </button>
+          </div>
+        </div>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search gifts, electronics, fashion..."
+          style={{ width: "100%", border: "2px solid #F0F0F0", borderRadius: 20, padding: "10px 20px", fontSize: 14, outline: "none", background: "#FAFAFA" }}
+          onFocus={e => e.target.style.borderColor = "#FF6B9D"} onBlur={e => e.target.style.borderColor = "#f0f0f0"} />
+      </div>
+
+      {/* CART DRAWER */}
+      {showCart && (
+        <div style={{ position: "fixed", top: 0, right: 0, width: 320, height: "100vh", background: "#fff", zIndex: 500, boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", animation: "fadeIn 0.2s" }}>
+          <div style={{ padding: "20px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h3 style={{ margin: 0, fontFamily: "'Playfair Display',serif" }}>Your Cart 🛒</h3>
+            <button onClick={() => setShowCart(false)} style={{ background: "#f0f0f0", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>✕</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+            {cartItems.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>
+                <div style={{ fontSize: 48 }}>🛒</div>
+                <p>Your cart is empty</p>
+                <button onClick={() => setShowCart(false)} style={{ background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", color: "#fff", border: "none", borderRadius: 20, padding: "10px 20px", cursor: "pointer", fontWeight: 600 }}>Start Shopping</button>
+              </div>
+            ) : cartItems.map(item => (
+              <div key={item.id} style={{ display: "flex", gap: 12, marginBottom: 14, padding: 12, background: "#FAFAFA", borderRadius: 14 }}>
+                <div style={{ fontSize: 32 }}>{item.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name}</div>
+                  <div style={{ color: "#FF6B9D", fontWeight: 700, fontSize: 13 }}>${item.price} × {item.qty}</div>
+                </div>
+                <button onClick={() => setCartItems(c => c.filter(i => i.id !== item.id))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>🗑️</button>
+              </div>
+            ))}
+          </div>
+          {cartItems.length > 0 && (
+            <div style={{ padding: 16, borderTop: "1px solid #f0f0f0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13, color: "#aaa" }}>
+                <span>Subtotal ({cartCount} items)</span>
+                <span>${cartTotal.toFixed(2)}</span>
+              </div>
+              {cartTotal <= 50 && <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>Add ${(50 - cartTotal).toFixed(2)} more for <b style={{ color: "#00B894" }}>FREE shipping!</b></div>}
+              {cartTotal > 50 && <div style={{ fontSize: 12, color: "#00B894", marginBottom: 8, fontWeight: 600 }}>✅ You qualify for FREE shipping!</div>}
+              <button onClick={openCheckout} style={{
+                width: "100%", background: "linear-gradient(135deg,#FF6B9D,#FF8E53)",
+                color: "#fff", border: "none", borderRadius: 14, padding: "14px",
+                fontWeight: 800, fontSize: 15, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}>
+                🔒 Secure Checkout · ${cartTotal.toFixed(2)}
+              </button>
+              {/* Payment icons */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                {["💳 Visa","🅿️ PayPal","🍎 Apple","🔵 Google","⚡ Stripe"].map(p => (
+                  <span key={p} style={{ fontSize: 11, color: "#aaa", background: "#f5f5f5", borderRadius: 6, padding: "2px 7px" }}>{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* NAV TABS */}
+      <div style={{ display: "flex", background: "#fff", borderBottom: "1px solid #f0f0f0", position: "sticky", top: 90, zIndex: 90 }}>
+        {[{ id: "home", label: "🏠 Home" }, { id: "shop", label: "🛍 Shop" }, { id: "agents", label: "🤖 AI Agents" }, { id: "sellers", label: "🌍 Sell" }].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, padding: "12px 8px", border: "none", background: "none", fontWeight: activeTab === tab.id ? 700 : 400, color: activeTab === tab.id ? "#FF6B9D" : "#888", fontSize: 13, cursor: "pointer", borderBottom: activeTab === tab.id ? "3px solid #FF6B9D" : "3px solid transparent", transition: "all 0.2s" }}>{tab.label}</button>
+        ))}
+      </div>
+
+      {/* ── HOME ── */}
+      {activeTab === "home" && (
+        <div style={{ padding: "20px 16px" }}>
+          <div style={{ background: "linear-gradient(135deg,#FF6B9D,#FF8E53,#FFD93D)", borderRadius: 24, padding: "28px 24px", marginBottom: 24, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: -10, top: -10, fontSize: 120, opacity: 0.2 }}>🎁</div>
+            <div style={{ position: "relative" }}>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600, letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>🌍 Shop the World</div>
+              <h1 style={{ color: "#fff", fontFamily: "'Playfair Display',serif", fontSize: 26, margin: "0 0 8px", lineHeight: 1.2 }}>Find the Perfect<br />Gift for Anyone</h1>
+              <p style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, margin: "0 0 16px" }}>Millions of products · Worldwide shipping · AI shopping assistants</p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button onClick={() => setActiveTab("shop")} style={{ background: "#fff", color: "#FF6B9D", border: "none", borderRadius: 20, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Shop Now →</button>
+                <button onClick={() => setActiveTab("agents")} style={{ background: "rgba(255,255,255,0.25)", color: "#fff", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 20, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🤖 Meet AI Agents</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment trust banner */}
+          <div style={{ background: "linear-gradient(135deg,#1a1a2e,#16213e)", borderRadius: 20, padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 28 }}>🔒</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Secure Global Payments</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {["💳 Cards","🅿️ PayPal","🍎 Apple Pay","🔵 Google Pay","⚡ Stripe","₿ Crypto","💵 COD"].map(p => (
+                  <span key={p} style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{p}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 22 }}>
+            {[{ n: "180+", label: "Countries", emoji: "🌍" },{ n: "2M+", label: "Products", emoji: "📦" },{ n: "500K+", label: "Sellers", emoji: "🏪" },{ n: "10M+", label: "Buyers", emoji: "😊" }].map(s => (
+              <div key={s.n} style={{ background: "#fff", borderRadius: 16, padding: "12px 6px", textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize: 20 }}>{s.emoji}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: "#1a1a2e" }}>{s.n}</div>
+                <div style={{ fontSize: 10, color: "#aaa" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: "#1a1a2e", marginBottom: 12 }}>Shop by Category</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8, marginBottom: 24 }}>
+            {CATEGORIES.map(cat => (
+              <button key={cat.name} onClick={() => { setSelectedCategory(cat.name); setActiveTab("shop"); }} style={{ background: "#fff", border: "2px solid #f0f0f0", borderRadius: 14, padding: "10px 4px", cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color; e.currentTarget.style.transform = "scale(1.06)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#f0f0f0"; e.currentTarget.style.transform = ""; }}>
+                <div style={{ fontSize: 22 }}>{cat.icon}</div>
+                <div style={{ fontSize: 10, color: "#666", marginTop: 3, fontWeight: 600 }}>{cat.name}</div>
+              </button>
+            ))}
+          </div>
+
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: "#1a1a2e", marginBottom: 14 }}>🔥 Today's Deals</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 14 }}>
+            {PRODUCTS.slice(0, 4).map(p => (
+              <ProductCard key={p.id} product={p} onChat={prod => { setChatAgent(AGENTS[0]); setChatProduct(prod); }} onAddCart={addToCart} onBuyNow={openBuyNow} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── SHOP ── */}
+      {activeTab === "shop" && (
+        <div style={{ padding: "20px 16px" }}>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 18, paddingBottom: 4 }}>
+            <button onClick={() => setSelectedCategory(null)} style={{ background: !selectedCategory ? "linear-gradient(135deg,#FF6B9D,#FF8E53)" : "#fff", color: !selectedCategory ? "#fff" : "#888", border: "2px solid " + (!selectedCategory ? "transparent" : "#f0f0f0"), borderRadius: 20, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>All</button>
+            {CATEGORIES.map(cat => (
+              <button key={cat.name} onClick={() => setSelectedCategory(selectedCategory === cat.name ? null : cat.name)} style={{ background: selectedCategory === cat.name ? `${cat.color}22` : "#fff", color: selectedCategory === cat.name ? cat.color : "#888", border: "2px solid " + (selectedCategory === cat.name ? cat.color : "#f0f0f0"), borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{cat.icon} {cat.name}</button>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 14 }}>
+            {filteredProducts.map(p => (
+              <ProductCard key={p.id} product={p} onChat={prod => { setChatAgent(AGENTS[0]); setChatProduct(prod); }} onAddCart={addToCart} onBuyNow={openBuyNow} />
+            ))}
+          </div>
+          {filteredProducts.length === 0 && (
+            <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
+              <div style={{ fontSize: 48 }}>🔍</div>
+              <p>No products found. Try a different search!</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI AGENTS ── */}
+      {activeTab === "agents" && (
+        <div style={{ padding: "20px 16px" }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 44, marginBottom: 8 }}>🤖</div>
+            <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: "#1a1a2e", margin: "0 0 8px" }}>Meet Your AI Shopping Team</h2>
+            <p style={{ color: "#888", fontSize: 13 }}>Available 24/7 in 8 languages to help you shop, compare, and decide.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 14, marginBottom: 28 }}>
+            {AGENTS.map(agent => (
+              <div key={agent.id} style={{ background: "#fff", borderRadius: 22, padding: "22px 18px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", cursor: "pointer", transition: "all 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = `0 12px 36px ${agent.color}33`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.07)"; }}>
+                <div style={{ width: 66, height: 66, borderRadius: "50%", background: `linear-gradient(135deg,${agent.color},${agent.color}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, margin: "0 auto 12px", boxShadow: `0 6px 20px ${agent.color}44` }}>{agent.emoji}</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#1a1a2e", marginBottom: 3 }}>{agent.name}</div>
+                <div style={{ fontSize: 11, color: agent.color, fontWeight: 600, marginBottom: 6 }}>{agent.role}</div>
+                <div style={{ fontSize: 11, color: "#aaa", marginBottom: 14, lineHeight: 1.4 }}>Expert in {agent.specialty}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 12 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00B894" }} />
+                  <span style={{ fontSize: 11, color: "#00B894", fontWeight: 600 }}>Online now</span>
+                </div>
+                <button onClick={() => { setChatAgent(agent); setChatProduct(null); }} style={{ background: `linear-gradient(135deg,${agent.color},${agent.color}99)`, color: "#fff", border: "none", borderRadius: 18, padding: "8px 18px", fontWeight: 700, fontSize: 12, cursor: "pointer", width: "100%" }}>Chat with {agent.name}</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── SELLERS ── */}
+      {activeTab === "sellers" && (
+        <div style={{ padding: "20px 16px" }}>
+          <div style={{ background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", borderRadius: 24, padding: "28px 24px", marginBottom: 22, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: -10, top: -10, fontSize: 110, opacity: 0.15 }}>🌍</div>
+            <div style={{ position: "relative" }}>
+              <h2 style={{ color: "#fff", fontFamily: "'Playfair Display',serif", fontSize: 24, margin: "0 0 8px" }}>Reach Buyers in 180+ Countries</h2>
+              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, margin: "0 0 16px" }}>Join 500,000+ global sellers. Get paid in your currency.</p>
+              <button onClick={() => setShowSeller(true)} style={{ background: "#fff", color: "#6C5CE7", border: "none", borderRadius: 20, padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Start Selling Today →</button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 12, marginBottom: 24 }}>
+            {[{ icon: "🌍", title: "Global Reach", desc: "Sell in 180+ countries" },{ icon: "🤖", title: "AI Support", desc: "AI agents convert visitors" },{ icon: "💳", title: "Multi-Currency", desc: "Paid in your currency" },{ icon: "📊", title: "Analytics", desc: "Real-time sales insights" },{ icon: "🚚", title: "Shipping Hub", desc: "50+ carrier integrations" },{ icon: "🔒", title: "Secure Payouts", desc: "Weekly, zero fraud risk" }].map(b => (
+              <div key={b.title} style={{ background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 2px 14px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize: 26, marginBottom: 6 }}>{b.icon}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#1a1a2e", marginBottom: 3 }}>{b.title}</div>
+                <div style={{ fontSize: 12, color: "#aaa" }}>{b.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{ fontFamily: "'Playfair Display',serif", color: "#1a1a2e", marginBottom: 14 }}>🏆 Top Sellers This Month</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
+            {SELLERS.map((s, i) => (
+              <div key={s.name} style={{ background: "#fff", borderRadius: 16, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: i===0?"linear-gradient(135deg,#FFD93D,#FF8E53)":i===1?"linear-gradient(135deg,#C0C0C0,#A0A0A0)":"linear-gradient(135deg,#CD7F32,#8B4513)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 14 }}>#{i+1}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{s.name} {s.country}</div>
+                  <div style={{ fontSize: 11, color: "#aaa" }}>⭐ {s.rating} · {s.sales} sales</div>
+                </div>
+                {s.verified && <span style={{ background: "#E8F8EF", color: "#00B894", fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px" }}>✓ Verified</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CHECKOUT MODAL */}
+      {showCheckout && (
+        <CheckoutModal
+          cartItems={checkoutItems}
+          cartTotal={checkoutTotal}
+          onClose={() => { setShowCheckout(false); setCheckoutSingleItem(null); }}
+          onSuccess={() => { setCartItems([]); setCheckoutSingleItem(null); }}
+        />
+      )}
+
+      {/* AGENT CHAT */}
+      {chatAgent && <AgentChat agent={chatAgent} product={chatProduct} onClose={() => { setChatAgent(null); setChatProduct(null); }} />}
+
+      {/* SELLER MODAL */}
+      {showSeller && <SellerModal onClose={() => setShowSeller(false)} />}
+
+      {/* FLOATING AI BUTTON */}
+      <div style={{ position: "fixed", bottom: 22, right: 18, zIndex: 200, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          {AGENTS.slice(0, 2).map(agent => (
+            <button key={agent.id} onClick={() => { setChatAgent(agent); setChatProduct(null); }} style={{ background: `linear-gradient(135deg,${agent.color},${agent.color}99)`, border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 17, cursor: "pointer", boxShadow: `0 4px 14px ${agent.color}66`, color: "#fff" }}>{agent.emoji}</button>
+          ))}
+        </div>
+        <button onClick={() => { setChatAgent(AGENTS[0]); setChatProduct(null); }} style={{ background: "linear-gradient(135deg,#FF6B9D,#FF8E53)", border: "none", borderRadius: 26, padding: "11px 18px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "0 6px 24px rgba(255,107,157,0.5)", display: "flex", alignItems: "center", gap: 6 }}>🤖 AI Help</button>
+      </div>
+    </div>
+  );
+}
